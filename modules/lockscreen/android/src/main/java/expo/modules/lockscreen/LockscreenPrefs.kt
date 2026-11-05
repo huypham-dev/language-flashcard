@@ -3,6 +3,7 @@ package expo.modules.lockscreen
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import java.util.UUID
 
 /** Shared state between the JS module, the foreground service and the activity listener. */
 internal object LockscreenPrefs {
@@ -27,19 +28,27 @@ internal object LockscreenPrefs {
   fun setLastScreenOnAt(ctx: Context, at: Long) = prefs(ctx).edit().putLong("lastScreenOnAt", at).apply()
 
   /**
-   * One-shot ticket set by the service on SCREEN_ON. The activity may show over the
-   * keyguard only when it consumes a fresh ticket, so normal launches never bypass the lock.
+   * One-shot ticket set by the service on SCREEN_ON, bound to the launch intent by a random
+   * in-memory nonce. The activity may show over the keyguard only when its intent carries
+   * that nonce and the card deep link, so other apps / normal launches never bypass the lock.
    */
-  fun setPendingShow(ctx: Context, at: Long) = prefs(ctx).edit().putLong("pendingShowAt", at).apply()
+  @Volatile private var pendingNonce: String? = null
+  @Volatile private var pendingAt = 0L
 
-  fun consumePendingShow(ctx: Context): Boolean {
-    val at = prefs(ctx).getLong("pendingShowAt", 0L)
-    if (at == 0L) return false
-    prefs(ctx).edit().remove("pendingShowAt").apply()
-    return System.currentTimeMillis() - at < PENDING_SHOW_TTL_MS
+  fun setPendingShow(at: Long) {
+    pendingNonce = UUID.randomUUID().toString()
+    pendingAt = at
+  }
+
+  fun consumePendingShow(intent: Intent?): Boolean {
+    val nonce = pendingNonce ?: return false
+    if (intent?.getStringExtra(EXTRA_NONCE) != nonce || intent.dataString != DEEP_LINK) return false
+    pendingNonce = null
+    return System.currentTimeMillis() - pendingAt < PENDING_SHOW_TTL_MS
   }
 
   private const val PENDING_SHOW_TTL_MS = 10_000L
+  private const val EXTRA_NONCE = "expo.modules.lockscreen.NONCE"
 
   fun lastError(ctx: Context) = prefs(ctx).getString("lastError", null)
   fun setLastError(ctx: Context, error: String?) = prefs(ctx).edit().putString("lastError", error).apply()
@@ -47,5 +56,6 @@ internal object LockscreenPrefs {
   fun deepLinkIntent(ctx: Context): Intent =
     Intent(Intent.ACTION_VIEW, Uri.parse(DEEP_LINK))
       .setPackage(ctx.packageName)
+      .putExtra(EXTRA_NONCE, pendingNonce)
       .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
 }

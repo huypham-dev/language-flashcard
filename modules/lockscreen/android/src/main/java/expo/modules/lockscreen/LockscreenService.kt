@@ -68,7 +68,7 @@ class LockscreenService : Service() {
   private fun onScreenOn() {
     val now = System.currentTimeMillis()
     LockscreenPrefs.setLastScreenOnAt(this, now)
-    LockscreenPrefs.setPendingShow(this, now)
+    LockscreenPrefs.setPendingShow(now)
     LockscreenActivityListener.allowCurrent(this)
     val mode = LockscreenPrefs.mode(this)
     Log.i(TAG, "SCREEN_ON at $now, mode=$mode")

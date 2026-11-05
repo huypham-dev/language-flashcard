@@ -3,6 +3,7 @@ package expo.modules.lockscreen
 import android.app.Activity
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -44,9 +45,14 @@ class LockscreenActivityListener : ReactActivityLifecycleListener {
     if (current?.get() === activity) current = null
   }
 
-  private fun allowIfTicket(activity: Activity) {
+  override fun onNewIntent(intent: Intent?): Boolean {
+    current?.get()?.let { allowIfTicket(it, intent) }
+    return false
+  }
+
+  private fun allowIfTicket(activity: Activity, intent: Intent? = activity.intent) {
     if (!LockscreenModule.supported) return
-    if (LockscreenPrefs.isEnabled(activity) && LockscreenPrefs.consumePendingShow(activity)) allow(activity)
+    if (LockscreenPrefs.isEnabled(activity) && LockscreenPrefs.consumePendingShow(intent)) allow(activity)
   }
 
   companion object {
