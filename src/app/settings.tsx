@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { LockscreenSettings } from '@/components/LockscreenSettings';
+import { isSupported } from '../../modules/lockscreen';
 import { choose, confirm, notify } from '@/lib/notify';
 import { pickJsonText, shareJson } from '@/lib/transfer';
 import { usePhraseStore } from '@/store/PhraseStore';
@@ -112,6 +114,12 @@ export default function SettingsScreen() {
           />
         </View>
       </Section>
+
+      {isSupported() && (
+        <Section title="Màn hình khóa">
+          <LockscreenSettings />
+        </Section>
+      )}
 
       <Section title="Dữ liệu">
         <Button label="📤 Xuất file JSON" onPress={exportData} disabled={busy} />
