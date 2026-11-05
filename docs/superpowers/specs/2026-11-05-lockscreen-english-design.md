@@ -51,7 +51,7 @@ Nguyên tắc: **thẻ học là route riêng `/lockscreen`**. Native ở giai �
 ## 5. Cấu trúc code
 
 ```
-app/                          # Expo Router screens
+src/app/                      # Expo Router screens (quy ước của template SDK 58)
   _layout.tsx
   index.tsx
   lockscreen.tsx

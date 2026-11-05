@@ -5,15 +5,28 @@ set -euo pipefail
 REPO="${1:?Usage: $0 owner/repo}"
 SPEC="docs/superpowers/specs/2026-11-05-lockscreen-english-design.md"
 
-label() { gh label create "$1" --repo "$REPO" --color "$2" --description "$3" --force >/dev/null; }
-milestone() {
-  gh api "repos/$REPO/milestones" --jq ".[] | select(.title==\"$1\") | .number" | grep -q . ||
+# Chỉ dùng REST API (gh api) để chạy được cả ở môi trường chặn GraphQL.
+# Chạy lại nhiều lần cũng an toàn: label được cập nhật, milestone/issue đã có thì bỏ qua.
+
+label() { # name color description
+  gh api -X PATCH "repos/$REPO/labels/$1" -f color="$2" -f description="$3" >/dev/null 2>&1 ||
+    gh api "repos/$REPO/labels" -f name="$1" -f color="$2" -f description="$3" >/dev/null
+}
+milestone_number() {
+  gh api "repos/$REPO/milestones?state=all&per_page=100" --jq ".[] | select(.title==\"$1\") | .number"
+}
+milestone() { # title description
+  [ -n "$(milestone_number "$1")" ] ||
     gh api "repos/$REPO/milestones" -f title="$1" -f description="$2" >/dev/null
 }
-issue() { # title labels milestone  (body từ stdin)
+EXISTING_TITLES="$(gh api --paginate "repos/$REPO/issues?state=all&per_page=100" --jq '.[] | select(.pull_request|not) | .title')"
+issue() { # title labels(comma) milestone  (body từ stdin)
   local body; body="$(cat)"
-  body="$body"$'\n\n'"📄 Spec: [\`$SPEC\`](../blob/main/$SPEC)"
-  gh issue create --repo "$REPO" --title "$1" --label "$2" --milestone "$3" --body "$body"
+  if grep -Fxq -- "$1" <<<"$EXISTING_TITLES"; then echo "↷ bỏ qua (đã có): $1"; return; fi
+  body="$body"$'\n\n'"📄 Spec: [\`$SPEC\`](https://github.com/$REPO/blob/main/$SPEC)"
+  local args=(-f title="$1" -f body="$body" -F milestone="$(milestone_number "$3")")
+  local l; IFS=',' read -ra ls <<<"$2"; for l in "${ls[@]}"; do args+=(-f "labels[]=$l"); done
+  gh api "repos/$REPO/issues" "${args[@]}" --jq '"#\(.number) \(.title)"'
 }
 
 label phase-1 "0e8a16" "Giai đoạn 1 – Expo Go"
