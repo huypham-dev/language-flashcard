@@ -24,6 +24,25 @@ npx expo start --web    # hoặc chạy bản web trên PC
 | `npm run typecheck` | Kiểm tra TypeScript |
 | `npm run lint` | ESLint |
 
+## Build APK bằng EAS (Phase 2)
+
+Phase 2 dùng native code nên **không chạy được trên Expo Go**, phải cài bản build riêng. Build chạy trên cloud, không cần Android Studio.
+
+```bash
+npx eas-cli@latest login                                    # lần đầu
+npx eas-cli@latest init                                     # lần đầu: gắn projectId vào app.json
+npx eas-cli@latest build --profile development --platform android
+```
+
+1. Build xong, mở link (hoặc QR) EAS trả về trên Xiaomi 15T và tải APK về cài. Cần cho phép "Cài ứng dụng không rõ nguồn gốc".
+2. Trên PC chạy `npx expo start --dev-client`, sau đó mở app *Lockscreen English* vừa cài và chọn server (hoặc quét QR).
+3. Sửa code JS thì app tự reload. Chỉ cần build lại khi thêm hoặc sửa native code (thư viện native, `modules/`, `app.json`).
+
+| Profile | Dùng để | Lệnh |
+|---|---|---|
+| `development` | Dev client APK, có hot reload | `npx eas-cli@latest build -p android --profile development` |
+| `preview` | APK độc lập để test thật (không cần PC) | `npx eas-cli@latest build -p android --profile preview` |
+
 ## Cấu trúc
 
 ```
