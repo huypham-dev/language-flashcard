@@ -43,6 +43,19 @@ npx eas-cli@latest build --profile development --platform android
 | `development` | Dev client APK, có hot reload | `npx eas-cli@latest build -p android --profile development` |
 | `preview` | APK độc lập để test thật (không cần PC) | `npx eas-cli@latest build -p android --profile preview` |
 
+## Dùng trên điện thoại (bản MVP)
+
+```bash
+npx eas-cli@latest build -p android --profile preview   # APK độc lập, không cần PC
+```
+
+1. Cài APK từ link/QR của EAS.
+2. Mở app → **Cài đặt → Màn hình khóa** → bật **Hiện trên màn hình khóa**, cho phép thông báo.
+3. Bấm **Mở** ở từng quyền trong danh sách (Xiaomi: *Hiển thị trên màn hình khóa*, *Mở cửa sổ khi chạy nền*, *Tự khởi động*, *Pin không giới hạn*).
+4. Tắt rồi bật màn hình → thẻ học hiện ra. Vuốt lên để đóng.
+
+**Đã biết (để sau):** trên Xiaomi 15T thẻ có thể chỉ hiện sau khi mở khóa, chưa đè lên màn hình khóa. Xem #15.
+
 ## Cấu trúc
 
 ```
