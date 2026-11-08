@@ -3,13 +3,19 @@ import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
 import { consumeAutoShowSuppression } from '@/lib/autoShow';
+import { nativeLockscreenEnabled } from '@/lib/lockscreenBridge';
+import { hideSplash } from '@/lib/splash';
 import { usePhraseStore } from '@/store/PhraseStore';
 
 const LOCKSCREEN = '/lockscreen';
 
 /**
- * Phase 1 stand-in for the real lock screen: opens the card on cold start and every time
- * the app comes back from the background, when `settings.autoShowOnOpen` is on.
+ * Shows the card on cold start and every time the app comes back, when
+ * `settings.autoShowOnOpen` or the native lock-screen feature is on.
+ *
+ * The card is opened when the app *leaves* (goes to the background), not when it comes
+ * back: on return — or when SCREEN_ON brings the app over the keyguard — the card is
+ * already on top, so the home list (or the guard's blank cover) never flashes first.
  */
 export function AutoShowLockscreen() {
   const { ready, data } = usePhraseStore();
@@ -25,22 +31,21 @@ export function AutoShowLockscreen() {
     enabledRef.current = enabled;
   }, [pathname, enabled]);
 
-  // Cold start.
+  // Cold start: the splash stays up; the lockscreen hides it once its card is ready.
   useEffect(() => {
     if (!ready || coldStartHandled.current) return;
     coldStartHandled.current = true;
     if (enabled && pathname !== LOCKSCREEN) router.push(LOCKSCREEN);
+    else if (pathname !== LOCKSCREEN) hideSplash();
   }, [ready, enabled, pathname]);
 
-  // Background → active.
+  // Leaving the app → open the card now, so it is waiting there on return.
   useEffect(() => {
-    let prev: string | null | undefined = AppState.currentState;
     const sub = AppState.addEventListener('change', (next) => {
-      const cameBack = prev === 'background' && next === 'active';
-      prev = next;
-      if (!cameBack) return;
+      if (next !== 'background') return;
       if (consumeAutoShowSuppression()) return;
-      if (enabledRef.current && pathRef.current !== LOCKSCREEN) router.push(LOCKSCREEN);
+      if (pathRef.current === LOCKSCREEN) return;
+      if (enabledRef.current || nativeLockscreenEnabled()) router.push(LOCKSCREEN);
     });
     return () => sub.remove();
   }, []);

@@ -1,4 +1,4 @@
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, AppState, BackHandler, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PhraseCard } from '@/components/PhraseCard';
 import { dismissLockscreen, ensureUnlocked, isPhoneLocked, nativeLockscreenEnabled } from '@/lib/lockscreenBridge';
 import { notify } from '@/lib/notify';
+import { hideSplash } from '@/lib/splash';
 import { useSpeech } from '@/lib/useSpeech';
 import { usePhraseStore } from '@/store/PhraseStore';
 import { colors, radius } from '@/theme';
@@ -20,6 +21,7 @@ export default function LockscreenScreen() {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [flipped, setFlipped] = useState(false);
   const started = useRef(false);
+  const [loaded, setLoaded] = useState(false);
   const [translateY] = useState(() => new Animated.Value(0));
 
   const current = store.data.phrases.find((p) => p.id === currentId) ?? null;
@@ -37,17 +39,28 @@ export default function LockscreenScreen() {
   useEffect(() => {
     if (store.ready && !started.current) {
       started.current = true;
-      next();
+      next().finally(() => setLoaded(true));
     }
   }, [store.ready, next]);
 
+  // Cold start: drop the splash only once the first card is on screen.
+  useEffect(() => {
+    if (loaded) hideSplash();
+  }, [loaded]);
+
   // With the native feature on, the card stays mounted behind the keyguard after
-  // dismiss(); show a fresh phrase each time the screen brings it back.
+  // dismiss(). Prepare the next card as soon as the app LEAVES the screen, so SCREEN_ON
+  // brings back a card that is already rendered, instead of an empty screen (the close
+  // animation left the card off-screen) that only fills in after 'active'.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state !== 'active' || !nativeLockscreenEnabled()) return;
-      translateY.setValue(0);
-      next();
+      if (!nativeLockscreenEnabled()) return;
+      if (state === 'background') {
+        translateY.setValue(0);
+        next();
+      } else if (state === 'active') {
+        translateY.setValue(0); // safety net if 'background' was missed
+      }
     });
     return () => sub.remove();
   }, [next, translateY]);
@@ -102,7 +115,6 @@ export default function LockscreenScreen() {
 
   return (
     <View style={styles.root} {...pan.panHandlers}>
-      <Stack.Screen options={{ headerShown: false, animation: 'fade' }} />
       <StatusBar hidden />
       <Animated.View style={[styles.fill, { transform: [{ translateY }] }]}>
         <SafeAreaView style={styles.fill}>
@@ -114,7 +126,7 @@ export default function LockscreenScreen() {
           </View>
 
           <View style={styles.center}>
-            {!store.ready ? null : current ? (
+            {!loaded ? null : current ? (
               <PhraseCard phrase={current} flipped={flipped} onFlip={() => setFlipped((f) => !f)} />
             ) : (
               <View style={styles.empty}>
