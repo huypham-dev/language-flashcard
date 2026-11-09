@@ -64,6 +64,7 @@ Tài liệu hiện có:
 |-------|----------|
 | #25 | Spec thiết kế: kiến trúc, data model, native module, quyền Xiaomi |
 | #26 | QA Phase 1 (đã đóng) |
+| #29 | Spec PC Inbox: thêm từ từ PC qua hộp thư chung (MockAPI) |
 
 ## Commit message
 
@@ -127,7 +128,7 @@ chore(build): add preview profile to eas.json
 
 - **Evidence:** chứng minh thay đổi chạy đúng. Tối thiểu dán kết quả `npm test`, `npm run typecheck` và `npm run lint`. Thay đổi UI thì kèm screenshot hoặc video. Sửa native code (`modules/`), `app.json` hoặc thêm thư viện native thì phải build bằng EAS và test trên điện thoại thật (Xiaomi 15T), ghi rõ profile đã build. Bước nào không kiểm tra thì ghi rõ và nói lý do.
 - **Refer:** ghi `Closes #<number>` nếu PR hoàn thành issue, `Refs #<number>` nếu chỉ liên quan. Không có issue thì xóa dòng đó. Xem mục Đóng issue.
-- **Tài liệu:** đổi kiến trúc, data model, luồng dữ liệu hoặc native module thì cập nhật issue spec (#25). Checklist test trên máy thì tạo issue `[Docs] QA ...`. Đổi cách chạy, build, cài đặt hoặc cấu trúc thư mục thì cập nhật `README.md`. Xem mục Tài liệu.
+- **Tài liệu:** đổi kiến trúc, data model, luồng dữ liệu hoặc native module thì cập nhật issue spec liên quan (#25 cho app, #29 cho PC Inbox). Checklist test trên máy thì tạo issue `[Docs] QA ...`. Đổi cách chạy, build, cài đặt hoặc cấu trúc thư mục thì cập nhật `README.md`. Xem mục Tài liệu.
 - **Kích thước:** mỗi PR chỉ một feature hoặc một fix. Thay đổi không liên quan thì tách PR riêng.
 
 ## Đóng issue
