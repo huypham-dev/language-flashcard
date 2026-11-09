@@ -13,6 +13,26 @@ export function isPhoneLocked(): boolean {
 }
 
 /**
+ * Tells the native side whether the card is what the screen shows. Only then may the app
+ * window be the first frame on SCREEN_ON (task snapshot, live window); otherwise native
+ * covers it with the background color, so no other route flashes (or leaks) over the
+ * keyguard. No-op without the native module.
+ */
+export function setCardOnScreen(onScreen: boolean) {
+  if (!isSupported()) return;
+  Lockscreen?.setCardOnScreen(onScreen).catch(() => {});
+}
+
+/** Resolves after the next frames are drawn, so a state change is on screen. */
+export function afterNextFrames(count = 2): Promise<void> {
+  return new Promise((resolve) => {
+    const step = (left: number) =>
+      left <= 0 ? resolve() : requestAnimationFrame(() => step(left - 1));
+    step(count);
+  });
+}
+
+/**
  * Leaving the card while the phone is locked would expose the rest of the app,
  * so ask for the PIN/fingerprint first. Resolves true when it is safe to continue.
  */

@@ -15,7 +15,8 @@ const LOCKSCREEN = '/lockscreen';
  *
  * The card is opened when the app *leaves* (goes to the background), not when it comes
  * back: on return — or when SCREEN_ON brings the app over the keyguard — the card is
- * already on top, so the home list (or the guard's blank cover) never flashes first.
+ * already on top. The snapshot Android shows first on SCREEN_ON is still the screen the
+ * app left from; the lockscreen route decides whether that snapshot may be used.
  */
 export function AutoShowLockscreen() {
   const { ready, data } = usePhraseStore();

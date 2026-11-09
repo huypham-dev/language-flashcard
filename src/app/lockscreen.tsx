@@ -1,11 +1,18 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, AppState, BackHandler, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PhraseCard } from '@/components/PhraseCard';
-import { dismissLockscreen, ensureUnlocked, isPhoneLocked, nativeLockscreenEnabled } from '@/lib/lockscreenBridge';
+import {
+  afterNextFrames,
+  dismissLockscreen,
+  ensureUnlocked,
+  isPhoneLocked,
+  nativeLockscreenEnabled,
+  setCardOnScreen,
+} from '@/lib/lockscreenBridge';
 import { notify } from '@/lib/notify';
 import { hideSplash } from '@/lib/splash';
 import { useSpeech } from '@/lib/useSpeech';
@@ -48,42 +55,65 @@ export default function LockscreenScreen() {
     if (loaded) hideSplash();
   }, [loaded]);
 
-  // With the native feature on, the card stays mounted behind the keyguard after
-  // dismiss(). Prepare the next card as soon as the app LEAVES the screen, so SCREEN_ON
-  // brings back a card that is already rendered, instead of an empty screen (the close
-  // animation left the card off-screen) that only fills in after 'active'.
+  // Report the card as on screen once it is drawn (a couple of frames after the commit),
+  // so native uncovers the app / allows the task snapshot only when it shows the card.
+  useFocusEffect(
+    useCallback(() => {
+      if (!loaded) return;
+      let active = true;
+      afterNextFrames().then(() => {
+        if (active) setCardOnScreen(true);
+      });
+      return () => {
+        active = false;
+        setCardOnScreen(false);
+      };
+    }, [loaded]),
+  );
+
+  // The card must not change while the app is away: the snapshot shows what was on screen
+  // when it left, and a different card behind it would flash on SCREEN_ON. The next card
+  // is drawn before the task goes back instead (sendAway).
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (!nativeLockscreenEnabled()) return;
-      if (state === 'background') {
-        translateY.setValue(0);
-        next();
-      } else if (state === 'active') {
-        translateY.setValue(0); // safety net if 'background' was missed
-      }
+      if (state === 'background' || state === 'active') translateY.setValue(0); // safety net
     });
     return () => sub.remove();
+  }, [translateY]);
+
+  /**
+   * Over the keyguard the task goes to the back and the card stays mounted. Draw the next
+   * card first, so the snapshot Android takes now is exactly what SCREEN_ON brings back.
+   */
+  const sendAway = useCallback(async () => {
+    if (isPhoneLocked()) {
+      await next();
+      translateY.setValue(0);
+      await afterNextFrames();
+    }
+    dismissLockscreen();
   }, [next, translateY]);
 
   // Over the keyguard, Back must not reveal the rest of the app: send the card away instead.
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!isPhoneLocked()) return false;
-      dismissLockscreen();
+      sendAway();
       return true;
     });
     return () => sub.remove();
-  }, []);
+  }, [sendAway]);
 
   const addPhrase = async () => {
     if (await ensureUnlocked()) router.replace('/edit/new');
   };
 
   const close = useCallback(() => {
-    Animated.timing(translateY, { toValue: -1000, duration: 180, useNativeDriver: true }).start(() =>
-      dismissLockscreen(),
-    );
-  }, [translateY]);
+    Animated.timing(translateY, { toValue: -1000, duration: 180, useNativeDriver: true }).start(() => {
+      sendAway();
+    });
+  }, [translateY, sendAway]);
 
   const pan = useMemo(
     () =>

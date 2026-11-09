@@ -57,5 +57,6 @@ internal object LockscreenPrefs {
     Intent(Intent.ACTION_VIEW, Uri.parse(DEEP_LINK))
       .setPackage(ctx.packageName)
       .putExtra(EXTRA_NONCE, pendingNonce)
-      .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+      // NO_ANIMATION: no cross-fade from the snapshot to the live window.
+      .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NO_ANIMATION)
 }

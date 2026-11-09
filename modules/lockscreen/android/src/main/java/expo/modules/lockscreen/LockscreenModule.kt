@@ -28,13 +28,29 @@ class LockscreenModule : Module() {
     Function("start") { mode: String ->
       LockscreenPrefs.setEnabled(context, true, mode)
       context.startForegroundService(Intent(context, LockscreenService::class.java))
+      // Turned on from Settings, so the card is not the screen being shown.
+      appContext.currentActivity?.let {
+        it.runOnUiThread { LockscreenActivityListener.setCardOnScreen(it, false) }
+      }
     }
 
     Function("stop") {
       LockscreenPrefs.setEnabled(context, false)
       context.stopService(Intent(context, LockscreenService::class.java))
-      appContext.currentActivity?.let { LockscreenActivityListener.clear(it) }
+      appContext.currentActivity?.let {
+        LockscreenActivityListener.clear(it)
+        // Feature off: back to Android's default snapshot behavior, no cover.
+        it.runOnUiThread { LockscreenActivityListener.setCardOnScreen(it, true) }
+      }
     }
+
+    /** The card calls this with true once it is drawn, and false when it leaves the screen. */
+    AsyncFunction("setCardOnScreen") { onScreen: Boolean ->
+      val activity = appContext.currentActivity ?: return@AsyncFunction
+      // With the feature off, keep Android's default behavior.
+      val enabled = LockscreenPrefs.isEnabled(context)
+      LockscreenActivityListener.setCardOnScreen(activity, onScreen || !enabled)
+    }.runOnQueue(Queues.MAIN)
 
     Function("isRunning") { LockscreenService.running }
 
