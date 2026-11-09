@@ -65,6 +65,7 @@ Tài liệu hiện có:
 | #25 | Spec thiết kế: kiến trúc, data model, native module, quyền Xiaomi |
 | #26 | QA Phase 1 (đã đóng) |
 | #29 | Spec PC Inbox: thêm từ từ PC qua hộp thư chung (MockAPI) |
+| #36 | QA PC Inbox trên Xiaomi 15T |
 
 ## Commit message
 
@@ -90,6 +91,7 @@ Theo [Conventional Commits](https://www.conventionalcommits.org), viết bằng 
   | `picker` | Thuật toán chọn câu (`src/logic/picker.ts`) |
   | `import` | Xuất/nhập JSON (`src/store/validate.ts`, `src/lib/transfer.ts`) |
   | `speech` | Đọc phát âm (`src/lib/useSpeech.ts`) |
+  | `inbox` | Hộp thư từ PC: `src/app/inbox.tsx`, `src/lib/inbox.ts`, `src/logic/inbox.ts`, `InboxUrlForm` |
   | `data` | Bộ câu mẫu `src/data/seed.json`, file nhập `data/*.json` |
   | `build` | `app.json`, `eas.json`, config plugin |
   | `claude` | `.claude/`, `CLAUDE.md`, `AGENTS.md` |
