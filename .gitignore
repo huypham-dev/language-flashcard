@@ -44,3 +44,6 @@ example
 
 # Never commit env files with real values (inbox URL etc.). Use .env.local.
 .env
+
+# Gradle output of local native modules
+modules/*/android/build/
