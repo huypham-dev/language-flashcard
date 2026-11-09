@@ -3,7 +3,6 @@ import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
 import { consumeAutoShowSuppression } from '@/lib/autoShow';
-import { nativeLockscreenEnabled } from '@/lib/lockscreenBridge';
 import { hideSplash } from '@/lib/splash';
 import { usePhraseStore } from '@/store/PhraseStore';
 
@@ -11,12 +10,12 @@ const LOCKSCREEN = '/lockscreen';
 
 /**
  * Shows the card on cold start and every time the app comes back, when
- * `settings.autoShowOnOpen` or the native lock-screen feature is on.
+ * `settings.autoShowOnOpen` is on.
  *
  * The card is opened when the app *leaves* (goes to the background), not when it comes
- * back: on return — or when SCREEN_ON brings the app over the keyguard — the card is
- * already on top. The snapshot Android shows first on SCREEN_ON is still the screen the
- * app left from; the lockscreen route decides whether that snapshot may be used.
+ * back, so it is already on top on return and the home list never flashes first.
+ * The native lock-screen feature does not use this: on SCREEN_ON the service opens the
+ * card deep link and native covers the app until the card is drawn.
  */
 export function AutoShowLockscreen() {
   const { ready, data } = usePhraseStore();
@@ -46,7 +45,7 @@ export function AutoShowLockscreen() {
       if (next !== 'background') return;
       if (consumeAutoShowSuppression()) return;
       if (pathRef.current === LOCKSCREEN) return;
-      if (enabledRef.current || nativeLockscreenEnabled()) router.push(LOCKSCREEN);
+      if (enabledRef.current) router.push(LOCKSCREEN);
     });
     return () => sub.remove();
   }, []);

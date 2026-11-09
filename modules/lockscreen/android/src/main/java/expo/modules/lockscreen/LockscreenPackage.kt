@@ -3,6 +3,7 @@ package expo.modules.lockscreen
 import android.app.Activity
 import android.app.ActivityManager
 import android.app.Application
+import android.app.KeyguardManager
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
@@ -49,9 +50,12 @@ class LockscreenActivityListener : ReactActivityLifecycleListener {
     resumed = true
     allowIfTicket(activity)
     activity.getSystemService(NotificationManager::class.java)?.cancel(LockscreenService.ID_CARD)
-    // Fallback: if the card never reports back (auto show suppressed, JS error), never
-    // leave the app covered.
-    handler.postDelayed({ removeCover(activity) }, COVER_FALLBACK_MS)
+    // The cover only exists for the trip over the keyguard. A normal return (phone
+    // unlocked) shows whatever route is there, at once.
+    val locked = activity.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked ?: false
+    if (!locked) removeCover(activity)
+    // Fallback: if the card never reports back (JS error), never leave the app covered.
+    else handler.postDelayed({ removeCover(activity) }, COVER_FALLBACK_MS)
   }
 
   override fun onPause(activity: Activity) {
