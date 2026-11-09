@@ -34,6 +34,8 @@ interface NativeLockscreen {
   getStatus(): LockscreenStatus;
   dismiss(): void;
   setCardOnScreen(onScreen: boolean): Promise<void>;
+  consumeDismissedReturn(): Promise<boolean>;
+  uncover(): Promise<void>;
   isLocked(): boolean;
   requestUnlock(): Promise<boolean>;
   getPermissions(): LockscreenPermissions;

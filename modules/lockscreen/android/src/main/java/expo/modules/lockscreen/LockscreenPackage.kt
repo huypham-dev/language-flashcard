@@ -53,9 +53,20 @@ class LockscreenActivityListener : ReactActivityLifecycleListener {
     // The cover only exists for the trip over the keyguard. A normal return (phone
     // unlocked) shows whatever route is there, at once.
     val locked = activity.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked ?: false
-    if (!locked) removeCover(activity)
-    // Fallback: if the card never reports back (JS error), never leave the app covered.
-    else handler.postDelayed({ removeCover(activity) }, COVER_FALLBACK_MS)
+    when {
+      // SCREEN_ON with the card still mounted (dismissed over the keyguard): show it now.
+      locked && cardOnScreen -> {
+        dismissedOverKeyguard = false
+        removeCover(activity)
+      }
+      // Opened normally after a dismiss: the card route is still on top. Keep the cover
+      // until JS has left the card (consumeDismissedReturn + uncover).
+      !locked && dismissedOverKeyguard -> Unit
+      !locked -> removeCover(activity)
+      else -> Unit
+    }
+    // Fallback: if JS never reports back, never leave the app covered.
+    handler.postDelayed({ removeCover(activity) }, COVER_FALLBACK_MS)
   }
 
   override fun onPause(activity: Activity) {
@@ -138,6 +149,29 @@ class LockscreenActivityListener : ReactActivityLifecycleListener {
     /** Same as `colors.bg` in src/theme.ts and the splash background. */
     internal val COVER_COLOR = Color.parseColor("#0B0F1A")
 
+    /**
+     * Set when the card is sent behind the keyguard. The card stays mounted for the next
+     * SCREEN_ON, but a normal launch after unlocking must not land on it.
+     */
+    @Volatile
+    private var dismissedOverKeyguard = false
+
+    /** Sends the card behind the keyguard, covered until we know why the app comes back. */
+    fun dismiss(activity: Activity) {
+      clear(activity)
+      dismissedOverKeyguard = true
+      addCover(activity)
+      activity.moveTaskToBack(true)
+    }
+
+    /** True once if the app was opened normally (unlocked) after a dismiss. */
+    fun consumeDismissedReturn(activity: Activity): Boolean {
+      val locked = activity.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked ?: false
+      if (locked || !dismissedOverKeyguard) return false
+      dismissedOverKeyguard = false
+      return true
+    }
+
     /** True while the card route is focused and drawn (reported by JS). */
     @Volatile
     private var cardOnScreen = false
@@ -170,6 +204,7 @@ class LockscreenActivityListener : ReactActivityLifecycleListener {
     }
 
     fun removeCover(activity: Activity) {
+      dismissedOverKeyguard = false
       val root = content(activity) ?: return
       root.findViewWithTag<View>(COVER_TAG)?.let { root.removeView(it) }
     }

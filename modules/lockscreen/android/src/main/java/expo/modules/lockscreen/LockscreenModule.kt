@@ -67,11 +67,19 @@ class LockscreenModule : Module() {
     }
 
     Function("dismiss") {
-      appContext.currentActivity?.let {
-        LockscreenActivityListener.clear(it)
-        it.moveTaskToBack(true)
-      }
+      appContext.currentActivity?.let { it.runOnUiThread { LockscreenActivityListener.dismiss(it) } }
     }
+
+    /** True once if the app was opened normally (phone unlocked) after the card was dismissed. */
+    AsyncFunction("consumeDismissedReturn") {
+      val activity = appContext.currentActivity ?: return@AsyncFunction false
+      LockscreenActivityListener.consumeDismissedReturn(activity)
+    }.runOnQueue(Queues.MAIN)
+
+    /** Removes the native cover once JS has drawn the route the user should see. */
+    AsyncFunction("uncover") {
+      appContext.currentActivity?.let { LockscreenActivityListener.removeCover(it) }
+    }.runOnQueue(Queues.MAIN)
 
     Function("isLocked") {
       context.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked ?: false

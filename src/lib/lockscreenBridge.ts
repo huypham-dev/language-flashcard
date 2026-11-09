@@ -23,6 +23,22 @@ export function setCardOnScreen(onScreen: boolean) {
   Lockscreen?.setCardOnScreen(onScreen).catch(() => {});
 }
 
+/**
+ * True once when the app is opened normally (phone unlocked) after the card was dismissed
+ * over the keyguard: the card route is still on top, covered by native until `uncover()`.
+ */
+export async function consumeDismissedReturn(): Promise<boolean> {
+  if (!isSupported() || !Lockscreen) return false;
+  return Lockscreen.consumeDismissedReturn().catch(() => false);
+}
+
+/** Removes the native cover after the current route has been drawn. */
+export async function uncoverAfterDraw() {
+  if (!isSupported() || !Lockscreen) return;
+  await afterNextFrames(3);
+  await Lockscreen.uncover().catch(() => {});
+}
+
 /** Resolves after the next frames are drawn, so a state change is on screen. */
 export function afterNextFrames(count = 2): Promise<void> {
   return new Promise((resolve) => {

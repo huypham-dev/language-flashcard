@@ -7,11 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PhraseCard } from '@/components/PhraseCard';
 import {
   afterNextFrames,
+  consumeDismissedReturn,
   dismissLockscreen,
   ensureUnlocked,
   isPhoneLocked,
   nativeLockscreenEnabled,
   setCardOnScreen,
+  uncoverAfterDraw,
 } from '@/lib/lockscreenBridge';
 import { notify } from '@/lib/notify';
 import { hideSplash } from '@/lib/splash';
@@ -30,6 +32,12 @@ export default function LockscreenScreen() {
   const started = useRef(false);
   const [loaded, setLoaded] = useState(false);
   const [translateY] = useState(() => new Animated.Value(0));
+
+  const autoShowOnOpen = store.data.settings.autoShowOnOpen;
+  const autoShowRef = useRef(autoShowOnOpen);
+  useEffect(() => {
+    autoShowRef.current = autoShowOnOpen;
+  }, [autoShowOnOpen]);
 
   const current = store.data.phrases.find((p) => p.id === currentId) ?? null;
 
@@ -75,9 +83,18 @@ export default function LockscreenScreen() {
   // when it left, and a different card behind it would flash on SCREEN_ON. The next card
   // is drawn before the task goes back instead (sendAway).
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => {
+    const sub = AppState.addEventListener('change', async (state) => {
       if (!nativeLockscreenEnabled()) return;
       if (state === 'background' || state === 'active') translateY.setValue(0); // safety net
+      // Opened normally after the card was dismissed over the keyguard: the card only stayed
+      // mounted for the next SCREEN_ON. Go back to the app unless auto show wants the card.
+      if (state === 'active' && (await consumeDismissedReturn())) {
+        if (!autoShowRef.current) {
+          if (router.canGoBack()) router.back();
+          else router.replace('/');
+        }
+        uncoverAfterDraw();
+      }
     });
     return () => sub.remove();
   }, [translateY]);
